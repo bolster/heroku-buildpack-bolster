@@ -105,7 +105,7 @@ PIP_DOWNLOAD_CACHE=$PIP_DOWNLOAD_CACHE bin/pip install --use-mirrors -r requirem
 
 if [ -f "requirements.embedded.txt" ]; then
 	echo "  ---> Installing dependencies from requirements.embedded.txt"
-	PIP_DOWNLOAD_CACHE=$PIP_DOWNLOAD_CACHE bin/pip install --use-mirrors -r requirements.embedded.txt | indent
+	PIP_DOWNLOAD_CACHE=$PIP_DOWNLOAD_CACHE bin/pip install --ignore-installed --use-mirrors -r requirements.embedded.txt | indent
 fi
 
 
