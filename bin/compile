@@ -118,6 +118,14 @@ OUT=$(virtualenv --relocatable .)
 }
 set -e
 
+if [ "$NAME" = "Python/Django" ]; then
+    source bin/activate
+    MANAGE_FILE=$(ls **/manage.py | head -1)
+    echo "Running collect static" | indent
+    python $MANAGE_FILE collectstatic --noinput
+fi
+
+
 # store new artifacts in cache
 for dir in $VIRTUALENV_DIRS; do
   rm -rf $CACHE_DIR/$dir
