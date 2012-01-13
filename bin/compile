@@ -103,6 +103,12 @@ fi
 echo "-----> Installing dependencies using pip version $(bin/pip --version | awk '{print $2}')"
 PIP_DOWNLOAD_CACHE=$PIP_DOWNLOAD_CACHE bin/pip install --use-mirrors -r requirements.txt | indent
 
+if [ -f "requirements.embedded.txt" ]; then
+	echo "  ---> Installing dependencies from requirements.embedded.txt"
+	PIP_DOWNLOAD_CACHE=$PIP_DOWNLOAD_CACHE bin/pip install --use-mirrors -r requirements.embedded.txt | indent
+fi
+
+
 set +e
 OUT=$(virtualenv --relocatable .)
 [ $? -ne 0 ] && {
