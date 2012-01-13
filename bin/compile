@@ -12,6 +12,7 @@ NAME=$($BIN_DIR/detect $BUILD_DIR)
 PIP_DOWNLOAD_CACHE=${PIP_DOWNLOAD_CACHE:-$CACHE_DIR/pip_downloads}
 VIRTUALENV_DIRS="bin include lib"
 VENDORED_MEMCACHED="http://cl.ly/0a191R3K160t1w1P0N25/vendor-libmemcached.tar.gz"
+BUILD_ID=`date +%s` # timestamp at time of this build
 
 indent() {
   RE="s/^/       /"
@@ -78,7 +79,10 @@ then
     cd ..
 fi
 
-
+# Since I haven't been able to find a way to set environment variables after
+# the initial build, we write the build ID to a file (it will also be in
+# Django settings)
+echo $BUILD_ID > build.id   
 
 # if Django, append settings
 if [ "$NAME" = "Python/Django" ]; then
@@ -86,6 +90,10 @@ if [ "$NAME" = "Python/Django" ]; then
 
   SETTINGS_FILE=$(ls **/settings.py | head -1)
   PROJECT=$(dirname $SETTINGS_FILE)
+
+  echo "Injecting code into $SETTINGS_FILE to provide the BUILD_ID" | indent
+  echo BUILD_ID=$BUILD_ID >> $SETTINGS_FILE
+
   echo "Injecting code into $SETTINGS_FILE to read from DATABASE_URL" | indent
 
   cat >>$SETTINGS_FILE <<EOF
