@@ -105,12 +105,17 @@ fi
 echo "-----> Installing dependencies using pip version $(bin/pip --version | awk '{print $2}')"
 PIP_DOWNLOAD_CACHE=$PIP_DOWNLOAD_CACHE bin/pip install --use-mirrors -r requirements.txt | indent
 
-if [ -f "requirements.embedded.txt" ]; then
-	echo "  ---> Installing dependencies from requirements.embedded.txt"
-	for line in `grep -v -P ^# requirements.embedded.txt`; do
-		echo "    > bin/pip install --ignore-installed --use-mirrors $line"
-		PIP_DOWNLOAD_CACHE=$PIP_DOWNLOAD_CACHE bin/pip install --ignore-installed --use-mirrors $line | indent;
+if [ -f "vendor/requirements.dist.txt" ]
+then
+	echo "  ---> Installing dependencies from vendor/requirements.dist.txt"
+	for line in `grep -v -P ^# vendor/requirements.dist.txt`; do
+		egg=`echo $line | awk '{split($0,arr,":")} END{print arr[3]}'`;
+		echo "    > easy_install --upgrade -O2 $egg";
+		easy_install --upgrade -O2 $egg | indent;
 	done
+else
+	echo "  ---> Didn't find vendor/requirements.dist.txt"
+	ls vendor | indent;
 fi
 
 
