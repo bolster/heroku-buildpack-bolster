@@ -4,6 +4,15 @@ Heroku buildpack: Python
 This is a [Heroku buildpack](http://devcenter.heroku.com/articles/buildpack) for Python apps.
 It uses [virtualenv](http://www.virtualenv.org/) and [pip](http://www.pip-installer.org/).
 
+It has been modified by Bolster Labs, Inc. to address specific needs.
+
+Modifications include:
+
+ * Creation of a BUILD_ID; injected into Django settings and also written into `build.id`
+ * Running of collectstatic in the slug compliation process
+ * Installation of Python eggs present in the vendor directory and listed in
+   `vendor/requirements.dist.txt`
+
 Usage
 -----
 
@@ -12,7 +21,7 @@ Example usage:
     $ ls
     Procfile  requirements.txt  web.py
 
-    $ heroku create --stack cedar --buildpack git@github.com:heroku/heroku-buildpack-python.git
+    $ heroku create --stack cedar --buildpack git@github.com:bolster/heroku-buildpack-bolster.git
 
     $ git push heroku master
     ...
@@ -34,6 +43,8 @@ Example usage:
 The buildpack will detect your app as Python if it has the file `requirements.txt` in the root. It will detect your app as Python/Django if there is an additional `settings.py` in a project subdirectory.
 
 It will use virtualenv and pip to install your dependencies, vendoring a copy of the Python runtime into your slug.  The `bin/`, `include/` and `lib/` directories will be cached between builds to allow for faster pip install time.
+
+It will use easy_install to install eggs listed in `vendor/requirements.dist.txt`. The format of this file is `package_name:package_hash:path_from_root`. Only the value of `path_from_root` is used by the buildpack. The other values are used by proprietary build tools; we are investigating the possibility of releasing these tools, but the process can easily be performed manually.
 
 Hacking
 -------
