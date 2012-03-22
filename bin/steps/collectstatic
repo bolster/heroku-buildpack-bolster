@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+echo "-----> Running collectstatic..."
+    source bin/activate
+    MANAGE_FILE=$(ls **/manage.py | head -1)
+    python $MANAGE_FILE collectstatic --noinput
+fi

@@ -3,6 +3,9 @@
 
 set -eo pipefail
 
+# Prepend proper path for virtualenv hackery. Will be deprecated soon.
+export PATH=:/usr/local/bin:$PATH
+
 BIN_DIR=$(cd $(dirname $0); pwd) # absolute path
 ROOT_DIR=$(dirname $BIN_DIR)
 BUILD_DIR=$1
@@ -14,96 +17,79 @@ VIRTUALENV_DIRS="bin include lib"
 VENDORED_MEMCACHED="http://cl.ly/0a191R3K160t1w1P0N25/vendor-libmemcached.tar.gz"
 BUILD_ID=`date +%s` # timestamp at time of this build
 
+unset GIT_DIR
+export PIP_DOWNLOAD_CACHE
+
 indent() {
   RE="s/^/       /"
   [ $(uname) == "Darwin" ] && sed -l "$RE" || sed -u "$RE"
 }
 
-virtualenv() {
-  python - "$@" <<EOF
-import sys
-sys.path.insert(0, "$ROOT_DIR/src/virtualenv-1.6.4")
-import virtualenv
-virtualenv.main()
-EOF
+function virtualenv (){
+  python "$ROOT_DIR/src/virtualenv-1.7/virtualenv.py" "$@"
 }
 
 cd $BUILD_DIR
 
-# reject a non-packaged Django app
+# Reject a non-packaged Django app.
 if [ "$NAME" = "Python" ]; then
   [ -f manage.py ] && [ -f settings.py ] && { echo " !     Django app must be in a package subdirectory"; exit 1; }
 fi
 
-# warn a checked-in virtualenv
+# Warn a checked-in virtualenv.
 if [ -d "lib" ] || [ -d "bin" ]; then
   echo " !     You have a virtualenv checked in. You should ignore the appropriate paths in your repo. See http://devcenter.heroku.com/articles/gitignore for more info.";
 fi
 
-# reject a conflicting checked-in virtualenv
+# Reject a conflicting checked-in virtualenv.
 if [ -f "lib/python2.7" ]; then
   echo " !     Checked-in virtualenv conflict."
   exit 1;
 fi
 
-
-# copy artifacts out of cache if exists
+# Copy artifacts out of cache if exists.
 mkdir -p $CACHE_DIR
 for dir in $VIRTUALENV_DIRS; do
   cp -R $CACHE_DIR/$dir . &> /dev/null || true
 done
 
+# Create virtualenv. Rebuild if corrupt.
+set +e
 echo "-----> Preparing virtualenv version $(virtualenv --version)"
-virtualenv --no-site-packages --distribute . | indent
 
-source bin/activate
+# Try to create the virtualenv.
+OUT=$(virtualenv --distribute --never-download  --prompt=venv . 2>&1)
 
-# create set-aside .heroku folder.
+# If there's an error, purge and recreate.
+[ $? -ne 0 ] && {
+  echo " !     Virtualenv corrupt, rebuilding."
+  for dir in $VIRTUALENV_DIRS; do
+    rm -fr $dir &> /dev/null || true
+  done
+  OUT=$(virtualenv --distribute --never-download  --prompt=venv . )
+}
+echo "$OUT" | indent
+
+set -e
+
+# Create set-aside .heroku folder.
 mkdir -p .heroku
 
+# Pylibmc support.
+source $BIN_DIR/steps/pylibmc
 
-# if pylibmc within requirements, use vendored libmemcached
-if (grep -Fxiq "pylibmc" requirements.txt) || (grep -Fiq "pylibmc=" requirements.txt)
-then
-    echo "-----> Noticed pylibmc. Bootstrapping libmemcached."
-    cd .heroku
+# Activate the virtualenv.
+echo "-----> Activating virtualenv"
+source bin/activate
 
-    if [ -d "vendor/lib/sasl2" ]; then
-      export LIBMEMCACHED=$(pwd)/vendor
-    else
-      curl -s -L -O $VENDORED_MEMCACHED
-      tar -zxvf vendor-libmemcached.tar.gz > /dev/null
-      rm vendor-libmemcached.tar.gz
-      export LIBMEMCACHED=$(pwd)/vendor
-    fi
-
-    export LIBMEMCACHED=$(pwd)/vendor
-    cd ..
-fi
-
-# Since I haven't been able to find a way to set environment variables after
-# the initial build, we write the build ID to a file (it will also be in
-# Django settings)
-echo $BUILD_ID > build.id   
-
-# if Django, append settings
-if [ "$NAME" = "Python/Django" ]; then
-  echo "-----> Django settings injection"
-
-  SETTINGS_FILE=$(ls **/settings.py | head -1)
-  PROJECT=$(dirname $SETTINGS_FILE)
-
-  echo "Injecting code into $SETTINGS_FILE to provide the BUILD_ID" | indent
-  echo BUILD_ID=$BUILD_ID >> $SETTINGS_FILE
-fi
-
+# Install mercurial, if needed.
 if (grep -Fiq "hg+" requirements.txt) then
-  PIP_DOWNLOAD_CACHE=$PIP_DOWNLOAD_CACHE bin/pip install --use-mirrors mercurial | indent
-  source bin/activate
+  pip install --use-mirrors mercurial | indent
 fi
 
-echo "-----> Installing dependencies using pip version $(bin/pip --version | awk '{print $2}')"
-PIP_DOWNLOAD_CACHE=$PIP_DOWNLOAD_CACHE bin/pip install --use-mirrors -r requirements.txt | indent
+# Install dependencies.
+echo "-----> Installing dependencies using pip version $(pip --version | awk '{print $2}')"
+pip install --use-mirrors -r requirements.txt --src ./.heroku/src | indent
 
 if [ -f "vendor/requirements.dist.txt" ]
 then
@@ -118,7 +104,17 @@ else
 	ls vendor | indent;
 fi
 
+# Django support.
+if [ "$NAME" = "Python/Django" ] then
+ SETTINGS_FILE=$(ls **/settings.py | head -1)
+ echo BUILD_ID=$BUILD_ID >> $SETTINGS_FILE
 
+ if ! [ "$DISABLE_INJECTION" ] then
+  source $BIN_DIR/steps/django
+ fi
+fi
+
+# Make virtualenv relocatable.
 set +e
 OUT=$(virtualenv --relocatable .)
 [ $? -ne 0 ] && {
@@ -129,14 +125,10 @@ OUT=$(virtualenv --relocatable .)
 set -e
 
 if [ "$NAME" = "Python/Django" ]; then
-    source bin/activate
-    MANAGE_FILE=$(ls **/manage.py | head -1)
-    echo "Running collect static" | indent
-    python $MANAGE_FILE collectstatic --noinput
+  source $BIN_DIR/steps/collectstatic
 fi
 
-
-# store new artifacts in cache
+# Store new artifacts in cache.
 for dir in $VIRTUALENV_DIRS; do
   rm -rf $CACHE_DIR/$dir
   cp -R $dir $CACHE_DIR/
