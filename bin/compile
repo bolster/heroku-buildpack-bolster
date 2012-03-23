@@ -123,9 +123,9 @@ OUT=$(virtualenv --relocatable .)
 }
 set -e
 
-if [ "$NAME" = "Python/Django" ]; then
-  source $BIN_DIR/steps/collectstatic
-fi
+# if [ "$NAME" = "Python/Django" ]; then
+#   source $BIN_DIR/steps/collectstatic
+# fi
 
 # Store new artifacts in cache.
 for dir in $VIRTUALENV_DIRS; do
