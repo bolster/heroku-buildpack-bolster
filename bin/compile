@@ -104,13 +104,13 @@ else
 fi
 
 # Django support.
-if [ "$NAME" = "Python/Django" ] then
+if [ "$NAME" = "Python/Django" ]; then
  SETTINGS_FILE=$(ls **/settings.py | head -1)
  echo BUILD_ID=$BUILD_ID >> $SETTINGS_FILE
 
- if ! [ "$DISABLE_INJECTION" ] then
-  source $BIN_DIR/steps/django
- fi
+ if [ ! "$DISABLE_INJECTION" ]; then
+  source $BIN_DIR/steps/django;
+ fi;
 fi
 
 # Make virtualenv relocatable.
