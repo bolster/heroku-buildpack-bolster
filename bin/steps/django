@@ -48,7 +48,7 @@ try:
             DATABASES[db_ref]['ENGINE'] = 'django.db.backends.mysql'
         elif url.scheme == 'sqlite':
             DATABASES[db_ref]['ENGINE'] = 'django.db.backends.sqlite3'
-            print 'WARNING: You are using sqlite as a database backend. Please make sure you know what you're doing. You almost certainly cannot expect this to work.""
+            print "WARNING: You are using sqlite as a database backend. Please make sure you know what you're doing. You almost certainly cannot expect this to work."
 
     if not 'default' in DATABASES:
         print "WARNING: You have not specified a 'default' database."
