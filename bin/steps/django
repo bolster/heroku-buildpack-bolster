@@ -32,7 +32,7 @@ try:
         db_ref = 'default' if url_key == DATABASE_URL_PREFIX else url_key[len(DATABASE_URL_PREFIX)+1:]
 
         # Ensure default database exists.
-        DATABASES[db_ref] = DATABASES.get('default', {})
+        DATABASES.setdefault(db_ref, {})
 
         # Update with environment configuration.
         DATABASES[db_ref].update({
