@@ -14,6 +14,9 @@ import urlparse
 # Register database schemes in URLs.
 urlparse.uses_netloc.append('postgres')
 urlparse.uses_netloc.append('mysql')
+urlparse.uses_netloc.append('sqlite')
+
+DATABASE_URL_PREFIX = "DATABASE_URL"
 
 try:
 
@@ -23,25 +26,32 @@ try:
     if 'DATABASES' not in locals():
         DATABASES = {}
 
-    if 'DATABASE_URL' in os.environ:
-        url = urlparse.urlparse(os.environ['DATABASE_URL'])
+
+	for url_key in filter(lambda x: x.startswith(), os.environ):
+        url = urlparse.urlparse(os.environ[url_key])
+		db_ref = 'default' if url_key == DATABASE_URL_PREFIX else url_key[len(DATABASE_URL_PREFIX)+1:]
 
         # Ensure default database exists.
-        DATABASES['default'] = DATABASES.get('default', {})
+        DATABASES[db_ref] = DATABASES.get('default', {})
 
         # Update with environment configuration.
-        DATABASES['default'].update({
+        DATABASES[db_ref].update({
             'NAME': url.path[1:],
-            'USER': url.username,
-            'PASSWORD': url.password,
-            'HOST': url.hostname,
-            'PORT': url.port,
+            'USER': url.username or '',
+            'PASSWORD': url.password or '',
+            'HOST': url.hostname or '',
+            'PORT': url.port or '',
         })
         if url.scheme == 'postgres':
-            DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql_psycopg2'
-
-        if url.scheme == 'mysql':
-            DATABASES['default']['ENGINE'] = 'django.db.backends.mysql'
+            DATABASES[db_ref]['ENGINE'] = 'django.db.backends.postgresql_psycopg2'
+        elif url.scheme == 'mysql':
+            DATABASES[db_ref]['ENGINE'] = 'django.db.backends.mysql'
+        elif url.scheme == 'sqlite':
+            DATABASES[db_ref]['ENGINE'] = 'django.db.backends.sqlite3'
+			print 'WARNING: You are using sqlite as a database backend. Please make sure you know what you're doing. You almost certainly cannot expect this to work.""
+		
+	if not 'default' in DATABASES:
+		print "WARNING: You have not specified a 'default' database."
 except Exception:
     print 'Unexpected error:', sys.exc_info()
 
