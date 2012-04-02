@@ -27,9 +27,9 @@ try:
         DATABASES = {}
 
 
-	for url_key in filter(lambda x: x.startswith(), os.environ):
+    for url_key in filter(lambda x: x.startswith(DATABASE_URL_PREFIX), os.environ):
         url = urlparse.urlparse(os.environ[url_key])
-		db_ref = 'default' if url_key == DATABASE_URL_PREFIX else url_key[len(DATABASE_URL_PREFIX)+1:]
+        db_ref = 'default' if url_key == DATABASE_URL_PREFIX else url_key[len(DATABASE_URL_PREFIX)+1:]
 
         # Ensure default database exists.
         DATABASES[db_ref] = DATABASES.get('default', {})
@@ -48,10 +48,10 @@ try:
             DATABASES[db_ref]['ENGINE'] = 'django.db.backends.mysql'
         elif url.scheme == 'sqlite':
             DATABASES[db_ref]['ENGINE'] = 'django.db.backends.sqlite3'
-			print 'WARNING: You are using sqlite as a database backend. Please make sure you know what you're doing. You almost certainly cannot expect this to work.""
-		
-	if not 'default' in DATABASES:
-		print "WARNING: You have not specified a 'default' database."
+            print 'WARNING: You are using sqlite as a database backend. Please make sure you know what you're doing. You almost certainly cannot expect this to work.""
+
+    if not 'default' in DATABASES:
+        print "WARNING: You have not specified a 'default' database."
 except Exception:
     print 'Unexpected error:', sys.exc_info()
 
