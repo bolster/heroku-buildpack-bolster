@@ -105,7 +105,7 @@ fi
 
 # Django support.
 if [ "$NAME" = "Python/Django" ]; then
- SETTINGS_FILE=$(ls **/settings.py | head -1)
+ SETTINGS_FILE=$(find $BUILD_DIR/. -maxdepth 3 -type f -name 'settings.py' | head -1)
  echo BUILD_ID=$BUILD_ID >> $SETTINGS_FILE
 
  if [ ! "$DISABLE_INJECTION" ]; then
